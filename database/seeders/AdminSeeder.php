@@ -18,7 +18,7 @@ class AdminSeeder extends Seeder
             ]
         );
 
-        // Assign role (hindari duplicate)
+        // Assign role
         if (!$user->hasRole('admin')) {
             $user->assignRole('admin');
         }
