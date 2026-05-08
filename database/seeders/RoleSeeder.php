@@ -23,5 +23,15 @@ class RoleSeeder extends Seeder
             'name' => 'customer',
             'guard_name' => 'web'
         ]);
+
+        Role::firstOrCreate([
+            'name' => 'baker',
+            'guard_name' => 'web'
+        ]);
+
+        Role::firstOrCreate([
+            'name' => 'customer_service',
+            'guard_name' => 'web'
+        ]);
     }
 }
