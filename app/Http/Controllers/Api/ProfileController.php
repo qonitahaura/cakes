@@ -10,7 +10,17 @@ class ProfileController extends Controller
 {
     public function show()
     {
-        return Auth::user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'address' => $user->address,
+            'roles' => $user->getRoleNames()->values()->all(),
+        ]);
     }
 
     public function update(Request $request)
@@ -28,6 +38,13 @@ class ProfileController extends Controller
             'address' => $request->address,
         ]);
 
-        return response()->json($user);
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'address' => $user->address,
+            'roles' => $user->getRoleNames()->values()->all(),
+        ]);
     }
 }

@@ -10,6 +10,7 @@ class PaymentService
     {
         return Payment::create([
             'order_id' => $order->id,
+            'payment_method' => 'manual',
             'amount' => $order->total_price,
             'payment_status' => 'unpaid',
         ]);

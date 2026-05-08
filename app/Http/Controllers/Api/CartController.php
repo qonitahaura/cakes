@@ -10,6 +10,11 @@ use App\Services\CustomizationService;
 
 class CartController extends Controller
 {
+    public function index(CartService $cartService)
+    {
+        return $this->get($cartService);
+    }
+
     public function add(Request $request, CartService $cartService, CustomizationService $custService)
     {
         $cartItem = $cartService->addItem(Auth::user(), $request->all());
