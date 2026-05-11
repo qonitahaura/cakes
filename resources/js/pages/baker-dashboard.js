@@ -6,11 +6,12 @@ export default async function init() {
     const [activeRes, completedRes, scheduleRes] = await Promise.all([
         api.get('/baker/orders'),
         api.get('/baker/orders', { params: { status: 'completed' } }),
-        api.get('/baker/orders/schedule'),
+        api.get('/baker/orders/schedule', { params: { per_page: 5 } }),
     ]);
-    const active = activeRes.data.filter((o) => o.status !== 'completed');
-    const completed = completedRes.data;
-    const urgent = scheduleRes.data.slice(0, 5);
+    const active = activeRes.data?.data ? activeRes.data.data.filter((o) => o.status !== 'completed') : (activeRes.data || []).filter((o) => o.status !== 'completed');
+    const completed = completedRes.data?.data ? completedRes.data.data : completedRes.data;
+    const urgent = scheduleRes.data?.data ? scheduleRes.data.data : scheduleRes.data;
+
 
     document.getElementById('bk-active').textContent = active.length;
     document.getElementById('bk-pending').textContent = active.filter((o) => o.status === 'paid').length;

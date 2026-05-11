@@ -7,9 +7,14 @@ function toast(m, t = 'success') {
 
 export default async function init() {
     await guard('customer_service');
+
     const { data } = await api.get('/cs/payments');
     const tbody = document.querySelector('#cs-payments tbody');
-    tbody.innerHTML = data
+
+    // API returns paginated response shape: { data: [...], meta: {...} }
+    const rows = data?.data ?? data ?? [];
+
+    tbody.innerHTML = rows
         .map(
             (p) => `<tr class="border-t border-accent-100">
       <td class="px-4 py-2">${p.id}</td>
@@ -42,3 +47,4 @@ export default async function init() {
         }
     });
 }
+
