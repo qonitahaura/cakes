@@ -8,39 +8,168 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
-    public function incoming()
+    public function incoming(Request $request)
     {
-        return Order::with(['user', 'items', 'payment'])
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = max(1, min(50, $perPage));
+        $page = (int) $request->input('page', 1);
+        $page = max(1, $page);
+
+        $q = Order::query()
             ->where('status', 'pending')
-            ->latest()
-            ->get();
+            ->select('orders.*')
+            ->with([
+                'user:id,name',
+                'payment:id,order_id,payment_status,amount',
+                'items:id,order_id,product_id,quantity',
+            ]);
+
+        if ($request->filled('search')) {
+            $s = $request->string('search')->trim();
+            $q->where(function ($qq) use ($s) {
+                $qq->where('code', 'like', '%' . $s . '%')
+                    ->orWhereHas('user', function ($u) use ($s) {
+                        $u->where('name', 'like', '%' . $s . '%');
+                    });
+            });
+        }
+
+        $sort = $request->string('sort')->value(); // newest|oldest
+        if ($sort === 'oldest') {
+            $q->orderBy('created_at', 'asc');
+        } else {
+            $q->orderBy('created_at', 'desc');
+        }
+
+        $paginator = $q->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'last_page' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
 
-    public function pickupSchedule()
+
+    public function pickupSchedule(Request $request)
     {
-        $orders = Order::with(['user', 'payment'])
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = max(1, min(100, $perPage));
+        $page = (int) $request->input('page', 1);
+        $page = max(1, $page);
+
+        $from = $request->input('from_date');
+        $to = $request->input('to_date');
+
+        $q = Order::query()
             ->where('fulfillment_type', 'pickup')
             ->whereNotNull('pickup_date')
             ->whereNotIn('status', ['cancelled', 'refunded'])
-            ->orderBy('pickup_date')
-            ->orderBy('pickup_time')
-            ->get();
+            ->select('orders.*')
+            ->with([
+                'user:id,name',
+                'payment:id,order_id,payment_status,amount',
+            ]);
 
-        return $orders->groupBy(fn ($o) => (string) $o->pickup_date)->map->values();
+        if ($from) {
+            $q->whereDate('pickup_date', '>=', $from);
+        }
+        if ($to) {
+            $q->whereDate('pickup_date', '<=', $to);
+        }
+
+        if ($request->filled('search')) {
+            $s = $request->string('search')->trim();
+            $q->where(function ($qq) use ($s) {
+                $qq->where('code', 'like', '%' . $s . '%')
+                    ->orWhereHas('user', function ($u) use ($s) {
+                        $u->where('name', 'like', '%' . $s . '%');
+                    });
+            });
+        }
+
+        $sort = $request->string('sort')->value(); // earliest|latest
+        if ($sort === 'latest') {
+            $q->orderByDesc('pickup_date')->orderByDesc('pickup_time');
+        } else {
+            $q->orderBy('pickup_date')->orderBy('pickup_time');
+        }
+
+        // Paginate the actual orders (frontend can optionally group).
+        $paginator = $q->paginate($perPage, ['*'], 'page', $page);
+
+        // Maintain backward-compatible response shape if frontend expects groups by date.
+        // We group only the current page results to avoid full-table loads.
+        $grouped = collect($paginator->items())
+            ->groupBy(fn($o) => (string) $o->pickup_date)
+            ->map->values();
+
+        return response()->json([
+            'data' => $grouped,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'last_page' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
+
 
     public function history(Request $request)
     {
-        $q = Order::with(['user', 'payment'])->latest();
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = max(1, min(50, $perPage));
+        $page = (int) $request->input('page', 1);
+        $page = max(1, $page);
+
+        $q = Order::query()
+            ->select('orders.*')
+            ->with([
+                'user:id,name',
+                'payment:id,order_id,payment_status,amount',
+            ]);
 
         if ($request->filled('status')) {
-            $q->where('status', $request->status);
+            $q->where('status', $request->string('status'));
         } else {
             $q->whereIn('status', ['completed', 'cancelled', 'refunded']);
         }
 
-        return $q->limit(200)->get();
+        if ($request->filled('search')) {
+            $s = $request->string('search')->trim();
+            $q->where(function ($qq) use ($s) {
+                $qq->where('code', 'like', '%' . $s . '%')
+                    ->orWhereHas('user', function ($u) use ($s) {
+                        $u->where('name', 'like', '%' . $s . '%');
+                    });
+            });
+        }
+
+        $sort = $request->string('sort')->value(); // newest|oldest
+        if ($sort === 'oldest') {
+            $q->orderBy('updated_at', 'asc');
+        } else {
+            $q->orderBy('updated_at', 'desc');
+        }
+
+        $paginator = $q->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'last_page' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
+
 
     public function show(string $id)
     {
@@ -64,7 +193,7 @@ class OrderController extends Controller
             if ($order->status !== 'pending') {
                 return response()->json(['message' => 'Order is not pending'], 422);
             }
-            $order->update(['status' => 'paid']);
+            $order->update(['status' => 'paid', 'validated_at' => now()]);
 
             return $order->fresh()->load(['user', 'payment', 'items']);
         }
@@ -73,7 +202,7 @@ class OrderController extends Controller
         $note = trim((string) ($order->note ?? ''));
         $msg = $data['message'] ?? 'Revision requested';
         $order->update([
-            'note' => $note ? $note."\n\n[CS] ".$msg : '[CS] '.$msg,
+            'note' => $note ? $note . "\n\n[CS] " . $msg : '[CS] ' . $msg,
             'status' => 'pending',
         ]);
 

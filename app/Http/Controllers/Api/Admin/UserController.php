@@ -15,14 +15,47 @@ class UserController extends Controller
         $q = User::query()->with('roles');
 
         if ($request->filled('search')) {
-            $s = '%'.$request->search.'%';
+
+            $s = '%' . $request->string('search')->trim() . '%';
             $q->where(function ($qq) use ($s) {
-                $qq->where('name', 'like', $s)->orWhere('email', 'like', $s);
+                $qq->where('name', 'like', $s)
+                    ->orWhere('email', 'like', $s);
             });
         }
 
-        return $q->orderBy('name')->get();
+        if ($request->filled('role')) {
+            $role = $request->string('role')->value();
+            $q->whereHas('roles', function ($rq) use ($role) {
+                $rq->where('name', $role);
+            });
+        }
+
+        $sort = $request->string('sort')->value(); // newest|oldest
+        $dir = match ($sort) {
+            'oldest' => 'asc',
+            default => 'desc',
+        };
+
+        $q->orderBy('created_at', $dir);
+
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = max(1, min(100, $perPage));
+        $page = (int) $request->input('page', 1);
+        $page = max(1, $page);
+
+        $paginator = $q->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'last_page' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
+
 
     public function show(string $id)
     {
@@ -57,7 +90,7 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         $payload = $r->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,'.$user->id,
+            'email' => 'sometimes|email|unique:users,email,' . $user->id,
             'password' => 'sometimes|string|min:6',
             'phone' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:500',
