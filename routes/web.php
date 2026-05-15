@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect('/login'));
+Route::get('/', fn() => redirect('/login'));
 
 Route::view('/login', 'auth.login', [
     'title' => 'Login',
@@ -48,7 +48,7 @@ Route::prefix('admin')->group(function () {
     ]);
     Route::get('/orders/{id}', function (string $id) {
         return view('admin.orders-show', [
-            'title' => 'Order #'.$id,
+            'title' => 'Order #' . $id,
             'role' => 'admin',
             'active' => 'orders',
             'page' => 'admin-orders-show',

@@ -10,6 +10,7 @@
         </div>
         <div class="card">
             <form id="cakes-login-form" class="space-y-4">
+                @csrf
                 <div>
                     <label class="label" for="email">Email</label>
                     <input class="input" id="email" name="email" type="email" autocomplete="username" required />
@@ -24,4 +25,6 @@
         </div>
     </div>
 </div>
+
+@vite(['resources/js/login.js'])
 @endsection
