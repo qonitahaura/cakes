@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
@@ -35,11 +36,27 @@ class AuthController extends Controller
     // LOGIN
     public function login(Request $request)
     {
+
+        $key = 'login.' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($key, 4)) {
+
+            $seconds = RateLimiter::availableIn($key);
+
+            return response()->json([
+                'message' => 'Terlalu banyak percobaan login',
+                'retry_after' => $seconds
+            ], 429);
+        }
+
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
+            RateLimiter::hit($key, 60);
             return response()->json(['message' => 'Login gagal'], 401);
         }
+
+        RateLimiter::clear($key);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
