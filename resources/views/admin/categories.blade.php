@@ -1,15 +1,69 @@
 @extends('layouts.dashboard')
 
 @section('dashboard-content')
+
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h2 class="page-title">Categories</h2>
-            <p class="mt-1 text-sm text-accent-600">Manage cake categories</p>
+            <p class="mt-1 text-sm text-accent-600">
+                Manage cake categories
+            </p>
         </div>
-        <button type="button" id="btn-cat-add" class="btn-primary">Add category</button>
+
+        <button
+            type="button"
+            id="btn-cat-add"
+            class="btn-primary"
+        >
+            Add category
+        </button>
     </div>
 
+    {{-- SEARCH & SORT --}}
+    <div class="mb-6 flex flex-wrap items-end gap-4">
+
+        {{-- Search --}}
+        <div>
+            <label
+                for="category-search"
+                class="mb-2 block text-sm font-medium text-accent-700"
+            >
+                Search
+            </label>
+
+            <input
+                type="text"
+                id="category-search"
+                placeholder="Search category..."
+                class="input min-w-[240px]"
+            />
+        </div>
+
+        {{-- Sort --}}
+        <div>
+            <label
+                for="category-sort"
+                class="mb-2 block text-sm font-medium text-accent-700"
+            >
+                Sort
+            </label>
+
+            <select
+                id="category-sort"
+                class="input min-w-[180px]"
+            >
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="az">A - Z</option>
+                <option value="za">Z - A</option>
+            </select>
+        </div>
+
+    </div>
+
+    {{-- TABLE --}}
     <x-data-table id="tbl-categories">
+
         <thead class="bg-accent-50/80 text-left text-xs font-semibold uppercase tracking-wide text-accent-500">
             <tr>
                 <th class="px-4 py-3">ID</th>
@@ -18,27 +72,103 @@
                 <th class="px-4 py-3 text-right">Actions</th>
             </tr>
         </thead>
-        <tbody></tbody>
+
+        <tbody>
+            {{-- DATA DARI DATABASE --}}
+        </tbody>
+
     </x-data-table>
 
-    <div id="modal-cat" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-accent-900/50 p-4">
+    {{-- MODAL --}}
+    <div
+        id="modal-cat"
+        class="fixed inset-0 z-50 hidden flex items-center justify-center bg-accent-900/50 p-4"
+    >
+
         <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+
             <div class="mb-4 flex items-center justify-between">
-                <h3 class="text-lg font-semibold">Category</h3>
-                <button type="button" id="modal-cat-close" class="btn-ghost text-xl">&times;</button>
+
+                <h3 class="text-lg font-semibold">
+                    Category
+                </h3>
+
+                <button
+                    type="button"
+                    id="modal-cat-close"
+                    class="btn-ghost text-xl"
+                >
+                    &times;
+                </button>
+
             </div>
+
             <form id="cat-form" class="space-y-3">
+
                 <input type="hidden" id="cat-id" />
+
                 <div>
-                    <label class="label" for="cat-name">Name</label>
-                    <input class="input" id="cat-name" required />
+                    <label class="label" for="cat-name">
+                        Name
+                    </label>
+
+                    <input
+                        class="input"
+                        id="cat-name"
+                        required
+                    />
                 </div>
+
                 <div>
-                    <label class="label" for="cat-slug">Slug (optional)</label>
-                    <input class="input" id="cat-slug" />
+                    <label class="label" for="cat-slug">
+                        Slug (optional)
+                    </label>
+
+                    <input
+                        class="input"
+                        id="cat-slug"
+                    />
                 </div>
-                <button type="submit" class="btn-primary w-full">Save</button>
+
+                <button
+                    type="submit"
+                    class="btn-primary w-full"
+                >
+                    Save
+                </button>
+
             </form>
+
         </div>
     </div>
+
+    {{-- SEARCH SCRIPT --}}
+    <script>
+
+        const searchInput = document.getElementById('category-search');
+
+        const tableBody = document.querySelector('#tbl-categories tbody');
+
+        searchInput.addEventListener('keyup', function () {
+
+            const keyword = this.value.toLowerCase();
+
+            const rows = tableBody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+
+                const text = row.innerText.toLowerCase();
+
+                if (text.includes(keyword)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+
+            });
+
+        });
+
+    </script>
+
 @endsection
